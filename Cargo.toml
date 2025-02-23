@@ -1,0 +1,18 @@
+[package]
+name = "retos"
+version = "0.1.0"
+edition = "2021"
+default-run = "qemu_bios"
+
+[workspace]
+members = ["kernel"]
+
+[dependencies]
+ovmf-prebuilt = "0.2.1"
+
+[build-dependencies]
+bootloader = "0.11.10"
+retos-kernel = { path = "kernel", artifact = "bin", target = "x86_64-unknown-none", version = "0.1.0" }
+
+[workspace.dependencies]
+retos-kernel = { version = "0.1.0", path = "kernel" }
