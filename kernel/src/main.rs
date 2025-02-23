@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-mod vga;
+mod print;
 
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
@@ -24,7 +24,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let framebuffer = boot_info.framebuffer.as_mut().expect("No framebuffer");
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();
-    vga::buffer::set_framebuffer(buffer, info);
+    print::buffer::set_framebuffer(buffer, info);
 
     println!("{HELLO_WORLD}");
     
