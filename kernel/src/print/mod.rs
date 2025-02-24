@@ -1,3 +1,3 @@
-pub(super) mod color;
-pub(super) mod buffer;
-pub(super) mod macros;
+pub mod color;
+pub mod buffer;
+pub mod macros;

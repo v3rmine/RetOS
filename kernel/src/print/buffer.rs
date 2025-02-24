@@ -56,8 +56,8 @@ lazy_static! {
 
 pub fn set_framebuffer(buffer: &'static mut [u8], info: FrameBufferInfo) {
     let mut writer = WRITER.write();
-    writer.framebuffer = Option::from(buffer);
-    writer.info = Option::from(info);
+    writer.framebuffer = Some(buffer);
+    writer.info = Some(info);
     writer.clear();
 }
 

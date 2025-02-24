@@ -1,10 +1,11 @@
 #![no_std]
 #![no_main]
 
-mod print;
+pub mod print;
 
 use bootloader_api::BootInfo;
 use core::panic::PanicInfo;
+use retos_kernel::interrupts::{gdt, idt};
 
 const HELLO_WORLD: &str = r#"
 ╭----------------------------------╮
@@ -27,7 +28,15 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     print::buffer::set_framebuffer(buffer, info);
 
     println!("{HELLO_WORLD}");
-    
+    println!();
+
+    print!("Initializing GDT... ");
+    gdt::init();
+    println!("initialized.");
+    print!("Initializing IDT... ");
+    idt::init_idt();
+    println!("initialized.");
+
     loop {
     }
 }

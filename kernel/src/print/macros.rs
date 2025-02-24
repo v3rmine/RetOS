@@ -4,8 +4,8 @@ use crate::print::buffer::WRITER;
 
 #[macro_export]
 macro_rules! println {
-    () => (print!("\n"));
-    ($($arg:tt)*) => (print!("{}\n", format_args!($($arg)*)));
+    () => ($crate::print::macros::_print(format_args!("\n")));
+    ($($arg:tt)*) => ($crate::print::macros::_print(format_args!("{}\n", format_args!($($arg)*))));
 }
 
 #[macro_export]
