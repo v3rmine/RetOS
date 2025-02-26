@@ -1,19 +1,21 @@
-use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1};
-use pc_keyboard::layouts::Azerty;
 use crate::interrupts::gdt;
 use crate::interrupts::interrupt::InterruptIndex;
 use crate::interrupts::pics::PICS;
-use crate::{print, println};
+use crate::{hlt_loop, print, println, task};
+use pc_keyboard::layouts::Azerty;
+use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1};
 use spin::{Lazy, RwLock};
 use x86_64::instructions::port::Port;
-use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
+use x86_64::registers::control::Cr2;
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 
 /// Interrupt Descriptor Table.
 /// Data structure used by the x86 architecture to implement an interrupt vector table.
 pub static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     let mut idt = InterruptDescriptorTable::new();
     idt.breakpoint.set_handler_fn(breakpoint_handler);
-    
+    idt.page_fault.set_handler_fn(page_fault_handler);
+
     unsafe {
         idt
             .double_fault
@@ -23,7 +25,7 @@ pub static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     
     idt[InterruptIndex::Timer.as_u8()].set_handler_fn(timer_interrupt_handler);
     idt[InterruptIndex::Keyboard.as_u8()].set_handler_fn(keyboard_interrupt_handler);
-    
+
     idt
 });
 
@@ -52,22 +54,22 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
 
-    let mut keyboard = KEYBOARD.write();
     let mut port = Port::new(0x60);
 
     let scancode: u8 = unsafe { port.read() };
-    if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-        if let Some(key) = keyboard.process_keyevent(key_event) {
-            match key {
-                DecodedKey::Unicode(character) => print!("{}", character),
-                DecodedKey::RawKey(key) => print!("{:?}", key),
-            }
-        }
-    }
+    task::keyboard::add_scancode(scancode);
 
     unsafe {
         PICS
             .write()
             .notify_end_of_interrupt(InterruptIndex::Keyboard.as_u8());
     }
+}
+
+extern "x86-interrupt" fn page_fault_handler(stack_frame: InterruptStackFrame, error_code: PageFaultErrorCode) {
+    println!("EXCEPTION: PAGE FAULT");
+    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Error Code: {:?}", error_code);
+    println!("{:#?}", stack_frame);
+    hlt_loop();
 }

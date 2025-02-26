@@ -106,6 +106,19 @@ impl Writer {
         match c {
             '\n' => self.newline(),
             '\r' => self.carriage_return(),
+            '\t' => {
+                let next_x = self.x + font_constants::CHAR_RASTER_WIDTH * 4;
+                if next_x >= self.width() {
+                    self.newline();
+                }
+                let next_y = self.y + font_constants::CHAR_RASTER_HEIGHT.val() * 4 + BORDER_PADDING;
+                if next_y >= self.height() {
+                    self.clear();
+                }
+                for _ in 0..4 {
+                    self.write_rendered_char(get_char_raster(' '));
+                }
+            },
             c => {
                 let next_x = self.x + font_constants::CHAR_RASTER_WIDTH;
                 if next_x >= self.width() {

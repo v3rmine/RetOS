@@ -1,9 +1,14 @@
 #![no_std]
 #![no_main]
 
+extern crate alloc;
+
 use bootloader_api::config::Mapping;
 use bootloader_api::{BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
+use retos_kernel::task::executor::Executor;
+use retos_kernel::task::keyboard;
+use retos_kernel::task::task::Task;
 use retos_kernel::{printer, println};
 
 const HELLO_WORLD: &str = r#"
@@ -35,8 +40,20 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("{HELLO_WORLD}");
     println!();
 
+    println!("Initializing kernel...");
     retos_kernel::init();
-    retos_kernel::hlt_loop();
+    println!("Kernel initialized!");
+    
+    // Paginate memory
+    /*
+    let physical_memory_offset = boot_info.physical_memory_offset.take().expect("No physical memory");
+    let mut mapper = unsafe { memory::tables::init(VirtAddr::new(physical_memory_offset)) };
+    let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
+    */
+
+    let mut executor = Executor::new();
+    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.run();
 }
 
 /// This function is called on panic.
