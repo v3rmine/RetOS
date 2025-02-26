@@ -16,12 +16,13 @@ pub mod interrupts;
 pub mod memory;
 pub mod allocator;
 pub mod task;
+pub mod cli;
 
 pub fn init() {
     print!("\t> Initializing GDT... ");
     gdt::init();
     println!("initialized.");
-    
+
     print!("\t> Initializing IDT... ");
     idt::init_idt();
     println!("initialized.");
@@ -29,7 +30,7 @@ pub fn init() {
     print!("\t> Initializing PICS... ");
     unsafe { interrupts::pics::PICS.write().initialize() };
     println!("initialized.");
-    
+
     print!("\t> Initializing heap... ");
     #[global_allocator]
     static TALCK: Talck<Mutex<()>, ClaimOnOom> = Talc::new(unsafe {

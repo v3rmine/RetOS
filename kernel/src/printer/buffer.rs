@@ -1,4 +1,4 @@
-use bootloader_api::info::{FrameBufferInfo,PixelFormat};
+use bootloader_api::info::{FrameBufferInfo, PixelFormat};
 use core::fmt;
 use font_constants::BACKUP_CHAR;
 use noto_sans_mono_bitmap::{
@@ -119,6 +119,10 @@ impl Writer {
                     self.write_rendered_char(get_char_raster(' '));
                 }
             },
+            // Backspace
+            '\u{08}' => {
+                // TODO implement backspace
+            }
             c => {
                 let next_x = self.x + font_constants::CHAR_RASTER_WIDTH;
                 if next_x >= self.width() {

@@ -1,7 +1,7 @@
 use crate::interrupts::gdt;
 use crate::interrupts::interrupt::InterruptIndex;
 use crate::interrupts::pics::PICS;
-use crate::{hlt_loop, print, println, task};
+use crate::{hlt_loop, println, task};
 use pc_keyboard::layouts::Azerty;
 use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1};
 use spin::{Lazy, RwLock};
@@ -44,16 +44,16 @@ extern "x86-interrupt" fn double_fault_handler(stack_frame: InterruptStackFrame,
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    print!(".");
+    //print!(".");
 
     unsafe {
-        PICS.write()
+        PICS
+            .write()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
     }
 }
 
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
-
     let mut port = Port::new(0x60);
 
     let scancode: u8 = unsafe { port.read() };

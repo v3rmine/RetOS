@@ -43,16 +43,19 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     println!("Initializing kernel...");
     retos_kernel::init();
     println!("Kernel initialized!");
-    
+    println!();
+
     // Paginate memory
     /*
     let physical_memory_offset = boot_info.physical_memory_offset.take().expect("No physical memory");
     let mut mapper = unsafe { memory::tables::init(VirtAddr::new(physical_memory_offset)) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
     */
+    
+    println!("===== User input starts =====");
 
     let mut executor = Executor::new();
-    executor.spawn(Task::new(keyboard::print_keypresses()));
+    executor.spawn(Task::new(keyboard::handle_keyboard()));
     executor.run();
 }
 

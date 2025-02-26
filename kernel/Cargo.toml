@@ -21,5 +21,11 @@ futures-util = { version = "0.3.31", default-features = false, features = ["allo
 pc-keyboard = "0.8.0"
 pic8259 = "0.11.0"
 
+# Cli
+embedded-cli = "0.2.1"
+
+# Errors
+anyhow = { version = "1.0.96", default-features = false }
+
 # Font
 noto-sans-mono-bitmap = { version = "0.3.1", default-features = false, features = ["regular", "size_16", "unicode-basic-latin", "unicode-specials", "unicode-latin-1-supplement", "unicode-latin-extended-a"]}
