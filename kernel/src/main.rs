@@ -1,11 +1,10 @@
 #![no_std]
 #![no_main]
 
-pub mod print;
-
-use bootloader_api::BootInfo;
+use bootloader_api::config::Mapping;
+use bootloader_api::{BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
-use retos_kernel::interrupts::{gdt, idt};
+use retos_kernel::{printer, println};
 
 const HELLO_WORLD: &str = r#"
 ╭----------------------------------╮
@@ -19,26 +18,25 @@ const HELLO_WORLD: &str = r#"
 ╰----------------------------------╯
 "#;
 
-bootloader_api::entry_point!(kernel_main);
+pub static BOOTLOADER_CONFIG: BootloaderConfig = {
+    let mut config = BootloaderConfig::new_default();
+    config.mappings.physical_memory = Some(Mapping::Dynamic);
+    config
+};
+
+bootloader_api::entry_point!(kernel_main, config = &BOOTLOADER_CONFIG);
 
 fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let framebuffer = boot_info.framebuffer.as_mut().expect("No framebuffer");
     let info = framebuffer.info();
     let buffer = framebuffer.buffer_mut();
-    print::buffer::set_framebuffer(buffer, info);
+    printer::buffer::set_framebuffer(buffer, info);
 
     println!("{HELLO_WORLD}");
     println!();
 
-    print!("Initializing GDT... ");
-    gdt::init();
-    println!("initialized.");
-    print!("Initializing IDT... ");
-    idt::init_idt();
-    println!("initialized.");
-
-    loop {
-    }
+    retos_kernel::init();
+    retos_kernel::hlt_loop();
 }
 
 /// This function is called on panic.

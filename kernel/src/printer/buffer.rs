@@ -1,11 +1,6 @@
 use bootloader_api::info::{FrameBufferInfo,PixelFormat};
-
 use core::fmt;
-
 use font_constants::BACKUP_CHAR;
-
-use lazy_static::lazy_static;
-
 use noto_sans_mono_bitmap::{
     get_raster,
     get_raster_width,
@@ -13,8 +8,7 @@ use noto_sans_mono_bitmap::{
     RasterHeight,
     RasterizedChar,
 };
-
-use spin::RwLock;
+use spin::{Lazy, RwLock};
 
 /// Additional vertical space between lines
 const LINE_SPACING: usize = 2;
@@ -42,16 +36,21 @@ mod font_constants {
     pub const FONT_WEIGHT: FontWeight = FontWeight::Regular;
 }
 
-lazy_static! {
-    /// A global `Writer` instance.
-    ///
-    /// Used by the `print!` and `println!` macros.
-    pub static ref WRITER: RwLock<Writer> = RwLock::new(Writer {
-        framebuffer: None,
-        info: None,
-        x: BORDER_PADDING,
-        y: BORDER_PADDING,
-    });
+/// A global `Writer` instance.
+/// Used by the `print!` and `println!` macros.
+pub static WRITER: Lazy<RwLock<Writer>> = Lazy::new(|| RwLock::new(Writer {
+    framebuffer: None,
+    info: None,
+    x: BORDER_PADDING,
+    y: BORDER_PADDING,
+}));
+
+/// Supports newline characters and implements the `core::fmt::Write` trait.
+pub struct Writer {
+    pub framebuffer: Option<&'static mut [u8]>,
+    pub info: Option<FrameBufferInfo>,
+    pub x: usize,
+    pub y: usize,
 }
 
 pub fn set_framebuffer(buffer: &'static mut [u8], info: FrameBufferInfo) {
@@ -71,14 +70,6 @@ fn get_char_raster(c: char) -> RasterizedChar {
         )
     }
     get(c).unwrap_or_else(|| get(BACKUP_CHAR).expect("Should get raster of backup char."))
-}
-
-/// Supports newline characters and implements the `core::fmt::Write` trait.
-pub struct Writer {
-    framebuffer: Option<&'static mut [u8]>,
-    info: Option<FrameBufferInfo>,
-    x: usize,
-    y: usize,
 }
 
 impl Writer {
