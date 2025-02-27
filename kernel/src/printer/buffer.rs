@@ -92,10 +92,43 @@ impl Writer {
         }
     }
 
+    pub fn clear_line(&mut self) {
+        let width = self.width();
+        if let Some(buffer) = self.framebuffer.as_mut() {
+            let line_start = self.y * width;
+            let line_end = line_start + width;
+            buffer[line_start..line_end].fill(0);
+        }
+        
+        //self.y = (self.y - 1) * width;
+        self.carriage_return();
+    }
+
+    pub fn erase_char(&mut self) {
+        if self.x > BORDER_PADDING {
+            self.x -= font_constants::CHAR_RASTER_WIDTH + LETTER_SPACING;
+        }
+        else if self.y > BORDER_PADDING {
+            self.y -= font_constants::CHAR_RASTER_HEIGHT.val() + LINE_SPACING;
+            self.x = self.width() - font_constants::CHAR_RASTER_WIDTH;
+        }
+        else {
+            return;
+        }
+
+        for y in 0..font_constants::CHAR_RASTER_HEIGHT.val() {
+            for x in 0..font_constants::CHAR_RASTER_WIDTH {
+                self.write_pixel(self.x + x, self.y + y, 0);
+            }
+        }
+    }
+
+    #[inline]
     fn width(&self) -> usize {
         self.info.unwrap().width
     }
 
+    #[inline]
     fn height(&self) -> usize {
         self.info.unwrap().height
     }
@@ -119,10 +152,6 @@ impl Writer {
                     self.write_rendered_char(get_char_raster(' '));
                 }
             },
-            // Backspace
-            '\u{08}' => {
-                // TODO implement backspace
-            }
             c => {
                 let next_x = self.x + font_constants::CHAR_RASTER_WIDTH;
                 if next_x >= self.width() {

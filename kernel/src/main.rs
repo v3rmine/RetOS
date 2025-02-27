@@ -52,7 +52,7 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_regions) };
     */
     
-    println!("===== User input starts =====");
+    println!("======= User input starts =======");
 
     let mut executor = Executor::new();
     executor.spawn(Task::new(keyboard::handle_keyboard()));

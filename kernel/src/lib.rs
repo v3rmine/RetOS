@@ -16,7 +16,7 @@ pub mod interrupts;
 pub mod memory;
 pub mod allocator;
 pub mod task;
-pub mod cli;
+pub mod terminal;
 
 pub fn init() {
     print!("\t> Initializing GDT... ");
