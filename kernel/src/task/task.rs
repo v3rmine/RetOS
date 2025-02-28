@@ -11,7 +11,7 @@ pub struct TaskId(u64);
 
 pub struct Task {
     pub id: TaskId,
-    future: Pin<Box<dyn Future<Output = ()>>>,
+    future: Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
 }
 
 pub struct TaskWaker {
@@ -27,7 +27,7 @@ impl TaskId {
 }
 
 impl Task {
-    pub fn new(future: impl Future<Output = ()> + 'static) -> Task {
+    pub fn new(future: impl Future<Output = ()> + Send + Sync + 'static) -> Task {
         Task {
             id: TaskId::new(),
             future: Box::pin(future),

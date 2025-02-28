@@ -6,7 +6,7 @@ extern crate alloc;
 use bootloader_api::config::Mapping;
 use bootloader_api::{BootInfo, BootloaderConfig};
 use core::panic::PanicInfo;
-use retos_kernel::task::executor::Executor;
+use retos_kernel::task::executor::{run_tasks, spawn_task};
 use retos_kernel::task::keyboard;
 use retos_kernel::task::task::Task;
 use retos_kernel::{printer, println};
@@ -53,10 +53,9 @@ fn kernel_main(boot_info: &'static mut BootInfo) -> ! {
     */
     
     println!("======= User input starts =======");
-
-    let mut executor = Executor::new();
-    executor.spawn(Task::new(keyboard::handle_keyboard()));
-    executor.run();
+    
+    spawn_task(Task::new(keyboard::handle_keyboard()));
+    run_tasks();
 }
 
 /// This function is called on panic.
