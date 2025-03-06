@@ -1,3 +1,4 @@
+use core::cmp::max;
 use bootloader_api::info::{FrameBufferInfo, PixelFormat};
 use core::fmt;
 use font_constants::BACKUP_CHAR;
@@ -9,6 +10,7 @@ use noto_sans_mono_bitmap::{
     RasterizedChar,
 };
 use spin::{Lazy, RwLock};
+use crate::printer::color::Color;
 
 /// Additional vertical space between lines
 const LINE_SPACING: usize = 2;
@@ -43,6 +45,8 @@ pub static WRITER: Lazy<RwLock<Writer>> = Lazy::new(|| RwLock::new(Writer {
     info: None,
     x: BORDER_PADDING,
     y: BORDER_PADDING,
+    fg_color: Color::YELLOW,
+    bg_color: Color::BLACK,
 }));
 
 /// Supports newline characters and implements the `core::fmt::Write` trait.
@@ -51,6 +55,8 @@ pub struct Writer {
     pub info: Option<FrameBufferInfo>,
     pub x: usize,
     pub y: usize,
+    pub fg_color: Color,
+    pub bg_color: Color,
 }
 
 pub fn set_framebuffer(buffer: &'static mut [u8], info: FrameBufferInfo) {
@@ -118,7 +124,7 @@ impl Writer {
 
         for y in 0..font_constants::CHAR_RASTER_HEIGHT.val() {
             for x in 0..font_constants::CHAR_RASTER_WIDTH {
-                self.write_pixel(self.x + x, self.y + y, 0);
+                self.write_pixel(self.x + x, self.y + y, 0, 0, 0);
             }
         }
     }
@@ -171,18 +177,32 @@ impl Writer {
     fn write_rendered_char(&mut self, rendered_char: RasterizedChar) {
         for (y, row) in rendered_char.raster().iter().enumerate() {
             for (x, byte) in row.iter().enumerate() {
-                self.write_pixel(self.x + x, self.y + y, *byte);
+                let (r, g, b) = self.blend(*byte);
+                self.write_pixel(self.x + x, self.y + y, r, g, b);
             }
         }
         self.x += rendered_char.width() + LETTER_SPACING;
     }
 
-    fn write_pixel(&mut self, x: usize, y: usize, intensity: u8) {
+    #[inline]
+    fn blend(&self, alpha: u8) -> (u8, u8, u8) {
+        let inv_alpha = 255 - alpha;
+
+        let out_r = ((self.fg_color.r as u16 * alpha as u16 + self.bg_color.r as u16 * inv_alpha as u16) / 255) as u8;
+        let out_g = ((self.fg_color.g as u16 * alpha as u16 + self.bg_color.g as u16 * inv_alpha as u16) / 255) as u8;
+        let out_b = ((self.fg_color.b as u16 * alpha as u16 + self.bg_color.b as u16 * inv_alpha as u16) / 255) as u8;
+
+        // Pack result
+        (out_r, out_g, out_b)
+    }
+
+    fn write_pixel(&mut self, x: usize, y: usize, r: u8, g: u8, b: u8) {
         let pixel_offset = y * self.info.unwrap().stride + x;
+
         let color = match self.info.unwrap().pixel_format {
-            PixelFormat::Rgb => [intensity, intensity, intensity / 2, 0],
-            PixelFormat::Bgr => [intensity / 2, intensity, intensity, 0],
-            PixelFormat::U8 => [if intensity > 200 { 0xf } else { 0 }, 0, 0, 0],
+            PixelFormat::Rgb => [r, g, b, 0],
+            PixelFormat::Bgr => [b, g, r, 0],
+            PixelFormat::U8 => [if max(max(r, g), b) > 200 { 0xf } else { 0 }, 0, 0, 0],
             // set a supported (but invalid) pixel format before panicking to avoid a double
             // panic; it might not be readable though
             // if let Some(& mut info) = self.info {

@@ -1,31 +1,17 @@
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum Color {
-    Black = 0,
-    Blue = 1,
-    Green = 2,
-    Cyan = 3,
-    Red = 4,
-    Magenta = 5,
-    Brown = 6,
-    LightGray = 7,
-    DarkGray = 8,
-    LightBlue = 9,
-    LightGreen = 10,
-    LightCyan = 11,
-    LightRed = 12,
-    Pink = 13,
-    Yellow = 14,
-    White = 15,
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-pub struct ColorCode(u8);
-
-impl ColorCode {
-    pub fn new(foreground: Color, background: Color) -> ColorCode {
-        ColorCode((background as u8) << 4 | (foreground as u8))
-    }
+impl Color {
+    pub const BLACK: Color = Color { r: 0, g: 0, b: 0 };
+    pub const WHITE: Color = Color { r: 255, g: 255, b: 255 };
+    pub const RED: Color = Color { r: 255, g: 0, b: 0 };
+    pub const GREEN: Color = Color { r: 0, g: 255, b: 0 };
+    pub const BLUE: Color = Color { r: 0, g: 0, b: 255 };
+    pub const YELLOW: Color = Color { r: 255, g: 255, b: 0 };
+    pub const CYAN: Color = Color { r: 0, g: 255, b: 255 };
+    pub const MAGENTA: Color = Color { r: 255, g: 0, b: 255 };
 }
