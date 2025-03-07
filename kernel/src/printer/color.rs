@@ -5,6 +5,9 @@ pub struct Color {
     pub b: u8,
 }
 
+pub static DEFAULT_FOREGROUND: Color = Color::YELLOW;
+pub static DEFAULT_BACKGROUND: Color = Color::BLACK;
+
 impl Color {
     pub const BLACK: Color = Color { r: 0, g: 0, b: 0 };
     pub const WHITE: Color = Color { r: 255, g: 255, b: 255 };

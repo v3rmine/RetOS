@@ -10,7 +10,7 @@ use noto_sans_mono_bitmap::{
     RasterizedChar,
 };
 use spin::{Lazy, RwLock};
-use crate::printer::color::Color;
+use crate::printer::color::{Color, DEFAULT_BACKGROUND, DEFAULT_FOREGROUND};
 
 /// Additional vertical space between lines
 const LINE_SPACING: usize = 2;
@@ -45,8 +45,8 @@ pub static WRITER: Lazy<RwLock<Writer>> = Lazy::new(|| RwLock::new(Writer {
     info: None,
     x: BORDER_PADDING,
     y: BORDER_PADDING,
-    fg_color: Color::YELLOW,
-    bg_color: Color::BLACK,
+    fg_color: DEFAULT_FOREGROUND,
+    bg_color: DEFAULT_BACKGROUND,
 }));
 
 /// Supports newline characters and implements the `core::fmt::Write` trait.

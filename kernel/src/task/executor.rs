@@ -3,12 +3,13 @@ use alloc::vec::Vec;
 use alloc::{collections::BTreeMap, sync::Arc};
 use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
+use spin::rwlock::RwLock;
 use spin::{Lazy, Mutex};
 use x86_64::instructions::interrupts;
 use x86_64::instructions::interrupts::enable_and_hlt;
 
 pub static WAKER_CACHE: Lazy<Mutex<BTreeMap<TaskId, Waker>>> = Lazy::new(|| Mutex::new(BTreeMap::new()));
-pub static TASKS: Mutex<BTreeMap<TaskId, Task>> = Mutex::new(BTreeMap::new());
+pub static TASKS: RwLock<BTreeMap<TaskId, Task>> = RwLock::new(BTreeMap::new());
 pub static NEW_TASKS: Mutex<Vec<Task>> = Mutex::new(Vec::new());
 pub static TASK_QUEUE: Lazy<Mutex<Arc<ArrayQueue<TaskId>>>> = Lazy::new(|| Mutex::new(Arc::new(ArrayQueue::new(100))));
 
@@ -17,23 +18,23 @@ pub fn spawn_task(task: Task) {
 }
 
 fn run_ready_tasks() {
-    let mut tasks = TASKS.lock();
-    let mut new_tasks = NEW_TASKS.lock();
+    {
+        let mut new_tasks = NEW_TASKS.lock();
 
-    for task in new_tasks.drain(..) {
-        let task_id = task.id;
-        if tasks.insert(task_id, task).is_some() {
-            panic!("task with same ID already in tasks");
+        for task in new_tasks.drain(..) {
+            let task_id = task.id;
+            if TASKS.write().insert(task_id, task).is_some() {
+                panic!("A task with same ID already in tasks");
+            }
+            TASK_QUEUE.lock().push(task_id).expect("Task queue full");
         }
-        TASK_QUEUE.lock().push(task_id).expect("queue full");
     }
-
-    drop(new_tasks);
 
     let task_queue = TASK_QUEUE.lock();
     while let Some(task_id) = task_queue.pop() {
         let mut waker_cache = WAKER_CACHE.lock();
 
+        let mut tasks = TASKS.write();
         let task = match tasks.get_mut(&task_id) {
             Some(task) => task,
             // task no longer existe

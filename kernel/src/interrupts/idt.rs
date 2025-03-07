@@ -1,9 +1,10 @@
+use crate::clock::tick_handler;
 use crate::interrupts::gdt;
 use crate::interrupts::interrupt::InterruptIndex;
 use crate::interrupts::pics::PICS;
 use crate::{hlt_loop, println, task};
+use pc_keyboard::layouts::{AnyLayout, Us104Key};
 use pc_keyboard::{HandleControl, Keyboard, ScancodeSet1};
-use pc_keyboard::layouts::Us104Key;
 use spin::{Lazy, RwLock};
 use x86_64::instructions::port::Port;
 use x86_64::registers::control::Cr2;
@@ -29,7 +30,7 @@ pub static IDT: Lazy<InterruptDescriptorTable> = Lazy::new(|| {
     idt
 });
 
-pub static KEYBOARD: Lazy<RwLock<Keyboard<Us104Key, ScancodeSet1>>> = Lazy::new(|| RwLock::new(Keyboard::new(ScancodeSet1::new(), Us104Key, HandleControl::Ignore)));
+pub static KEYBOARD: Lazy<RwLock<Keyboard<AnyLayout, ScancodeSet1>>> = Lazy::new(|| RwLock::new(Keyboard::new(ScancodeSet1::new(), AnyLayout::Us104Key(Us104Key), HandleControl::Ignore)));
 
 pub fn init_idt() {
     IDT.load();
@@ -44,7 +45,7 @@ extern "x86-interrupt" fn double_fault_handler(stack_frame: InterruptStackFrame,
 }
 
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
-    //print!(".");
+    tick_handler();
 
     unsafe {
         PICS

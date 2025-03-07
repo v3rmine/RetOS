@@ -17,19 +17,21 @@ pub mod memory;
 pub mod allocator;
 pub mod task;
 pub mod terminal;
+pub mod clock;
+pub mod logger;
 
 pub fn init() {
     print!("\t> Initializing GDT... ");
     gdt::init();
-    println!("initialized.");
+    println!("initialized!");
 
     print!("\t> Initializing IDT... ");
     idt::init_idt();
-    println!("initialized.");
+    println!("initialized!");
 
     print!("\t> Initializing PICS... ");
     unsafe { interrupts::pics::PICS.write().initialize() };
-    println!("initialized.");
+    println!("initialized!");
 
     print!("\t> Initializing heap... ");
     #[global_allocator]
@@ -39,11 +41,11 @@ pub fn init() {
     unsafe {
         TALCK.lock().claim(Span::from(&raw mut ARENA)).expect("Could not claim heap");
     }
-    println!("initialized");
+    println!("initialized!");
 
     print!("\t> Enabling interrupts... ");
     x86_64::instructions::interrupts::enable();
-    println!("enabled.");
+    println!("enabled!");
 }
 
 pub fn hlt_loop() -> ! {

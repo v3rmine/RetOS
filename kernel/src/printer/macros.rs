@@ -21,3 +21,17 @@ pub fn _print(args: fmt::Arguments) {
         WRITER.write().write_fmt(args).unwrap();
     });
 }
+
+#[macro_export]
+macro_rules! set_foreground {
+    ($arg:tt) => {
+        WRITER.write().fg_color = $arg;
+    }
+}
+
+#[macro_export]
+macro_rules! set_background {
+    ($arg:tt) => {
+        WRITER.write().bg_color = $arg;
+    }
+}

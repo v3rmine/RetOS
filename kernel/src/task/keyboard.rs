@@ -2,16 +2,17 @@ use crate::interrupts::idt::KEYBOARD;
 use crate::println;
 use crate::terminal::cli::handle_command;
 use crate::terminal::terminal::TerminalBuffer;
-use conquer_once::spin::OnceCell;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 use crossbeam_queue::ArrayQueue;
 use embedded_cli::cli::CliBuilder;
 use futures_util::task::AtomicWaker;
 use futures_util::{Stream, StreamExt};
+use goolog::set_target;
 use pc_keyboard::{DecodedKey, KeyCode};
+use spin::Once;
 
-static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+static SCANCODE_QUEUE: Once<ArrayQueue<u8>> = Once::new();
 static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub struct ScancodeStream {
@@ -26,8 +27,8 @@ impl Default for ScancodeStream {
 
 impl ScancodeStream {
     pub fn new() -> Self {
-        SCANCODE_QUEUE.try_init_once(|| ArrayQueue::new(100))
-            .expect("ScancodeStream::new should only be called once");
+        // ScancodeStream::new should only be called once
+        SCANCODE_QUEUE.call_once(|| ArrayQueue::new(100));
         ScancodeStream { _private: () }
     }
 }
@@ -37,7 +38,7 @@ impl Stream for ScancodeStream {
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<u8>> {
         let queue = SCANCODE_QUEUE
-            .try_get()
+            .get()
             .expect("scancode queue not initialized");
 
         // fast path
@@ -45,7 +46,7 @@ impl Stream for ScancodeStream {
             return Poll::Ready(Some(scancode));
         }
 
-        WAKER.register(&cx.waker());
+        WAKER.register(cx.waker());
         match queue.pop() {
             Some(scancode) => {
                 WAKER.take();
@@ -57,7 +58,7 @@ impl Stream for ScancodeStream {
 }
 
 pub fn add_scancode(scancode: u8) {
-    if let Ok(queue) = SCANCODE_QUEUE.try_get() {
+    if let Some(queue) = SCANCODE_QUEUE.get() {
         match queue.push(scancode) {
             Ok(_) => WAKER.wake(),
             Err(_) => println!("WARNING: scancode queue full; dropping keyboard input")
@@ -68,8 +69,9 @@ pub fn add_scancode(scancode: u8) {
 }
 
 pub async fn handle_keyboard() {
+    set_target!("Keyboard");
+
     let mut scancodes = ScancodeStream::new();
-    let mut keyboard = KEYBOARD.write();
 
     let mut terminal_buffer = TerminalBuffer;
     let command_buffer: [u8; 100] = [0; 100];
@@ -85,8 +87,10 @@ pub async fn handle_keyboard() {
         .unwrap();
 
     while let Some(scancode) = scancodes.next().await {
+        let mut keyboard = KEYBOARD.write();
         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
-        if let Some(key) = keyboard.process_keyevent(key_event) {
+            if let Some(key) = keyboard.process_keyevent(key_event) {
+                drop(keyboard);
                 match key {
                     DecodedKey::Unicode(character) => handle_command(&mut cli, character as u8),
                     DecodedKey::RawKey(key) => match key {

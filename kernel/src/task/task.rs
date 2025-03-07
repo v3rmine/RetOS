@@ -1,5 +1,6 @@
 use core::{future::Future, pin::Pin};
 use alloc::boxed::Box;
+use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::task::Wake;
 use core::sync::atomic::{AtomicU64, Ordering};
@@ -7,10 +8,12 @@ use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[repr(transparent)]
 pub struct TaskId(u64);
 
 pub struct Task {
     pub id: TaskId,
+    pub name: String,
     future: Pin<Box<dyn Future<Output = ()> + Send + Sync>>,
 }
 
@@ -27,9 +30,10 @@ impl TaskId {
 }
 
 impl Task {
-    pub fn new(future: impl Future<Output = ()> + Send + Sync + 'static) -> Task {
+    pub fn new(name: String, future: impl Future<Output = ()> + Send + Sync + 'static) -> Task {
         Task {
             id: TaskId::new(),
+            name,
             future: Box::pin(future),
         }
     }
