@@ -83,6 +83,7 @@ find ./target/release -name "retos-*.img"
   - [x] Memory pagination
 - Others
   - [ ] Burn image to USB stick (maybe need [multiboot2](https://github.com/rust-osdev/multiboot2), [doc](https://docs.rs/multiboot2/latest/multiboot2/))
+  - [ ] Linux VM?
 
 ## Contributors
 
