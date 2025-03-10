@@ -8,10 +8,12 @@ use spin::{Lazy, Mutex};
 use x86_64::instructions::interrupts;
 use x86_64::instructions::interrupts::enable_and_hlt;
 
-pub static WAKER_CACHE: Lazy<Mutex<BTreeMap<TaskId, Waker>>> = Lazy::new(|| Mutex::new(BTreeMap::new()));
-pub static TASKS: RwLock<BTreeMap<TaskId, Task>> = RwLock::new(BTreeMap::new());
+pub static WAKER_CACHE: Lazy<Mutex<BTreeMap<TaskId, Waker>>> =
+    Lazy::new(|| Mutex::new(BTreeMap::new()));
+pub static TASKS: RwLock<BTreeMap<TaskId, RwLock<Task>>> = RwLock::new(BTreeMap::new());
 pub static NEW_TASKS: Mutex<Vec<Task>> = Mutex::new(Vec::new());
-pub static TASK_QUEUE: Lazy<Mutex<Arc<ArrayQueue<TaskId>>>> = Lazy::new(|| Mutex::new(Arc::new(ArrayQueue::new(100))));
+pub static TASK_QUEUE: Lazy<Mutex<Arc<ArrayQueue<TaskId>>>> =
+    Lazy::new(|| Mutex::new(Arc::new(ArrayQueue::new(100))));
 
 pub fn spawn_task(task: Task) {
     NEW_TASKS.lock().push(task);
@@ -23,7 +25,7 @@ fn run_ready_tasks() {
 
         for task in new_tasks.drain(..) {
             let task_id = task.id;
-            if TASKS.write().insert(task_id, task).is_some() {
+            if TASKS.write().insert(task_id, RwLock::new(task)).is_some() {
                 panic!("A task with same ID already in tasks");
             }
             TASK_QUEUE.lock().push(task_id).expect("Task queue full");
@@ -34,21 +36,28 @@ fn run_ready_tasks() {
     while let Some(task_id) = task_queue.pop() {
         let mut waker_cache = WAKER_CACHE.lock();
 
-        let mut tasks = TASKS.write();
-        let task = match tasks.get_mut(&task_id) {
-            Some(task) => task,
-            // task no longer existe
-            None => continue,
+        let task_result = {
+            let tasks = TASKS.read();
+            let task = if let Some(task) = tasks.get(&task_id) {
+                task.read()
+            } else {
+                continue;
+            };
+
+            let waker = waker_cache
+                .entry(task_id)
+                .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
+
+            let mut context = Context::from_waker(waker);
+
+            task.poll(&mut context)
         };
 
-        let waker = waker_cache
-            .entry(task_id)
-            .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
-
-        let mut context = Context::from_waker(waker);
-        match task.poll(&mut context) {
+        match task_result {
             Poll::Ready(()) => {
-                tasks.remove(&task_id);
+                {
+                    TASKS.write().remove(&task_id);
+                }
                 waker_cache.remove(&task_id);
             }
             Poll::Pending => {}
