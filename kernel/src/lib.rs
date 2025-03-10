@@ -6,10 +6,7 @@
 
 extern crate alloc;
 
-use crate::allocator::ARENA;
 use crate::interrupts::{gdt, idt};
-use spin::Mutex;
-use talc::{ClaimOnOom, Span, Talc, Talck};
 
 pub mod printer;
 pub mod interrupts;
@@ -22,7 +19,7 @@ pub mod logger;
 
 pub fn init() {
     print!("\t> Initializing GDT... ");
-    gdt::init();
+    gdt::init_gdt();
     println!("initialized!");
 
     print!("\t> Initializing IDT... ");
@@ -34,13 +31,7 @@ pub fn init() {
     println!("initialized!");
 
     print!("\t> Initializing heap... ");
-    #[global_allocator]
-    static TALCK: Talck<Mutex<()>, ClaimOnOom> = Talc::new(unsafe {
-        ClaimOnOom::new(Span::from_array(core::ptr::addr_of!(ARENA).cast_mut()))
-    }).lock::<Mutex<()>>();
-    unsafe {
-        TALCK.lock().claim(Span::from(&raw mut ARENA)).expect("Could not claim heap");
-    }
+    allocator::init_allocator();
     println!("initialized!");
 
     print!("\t> Enabling interrupts... ");
